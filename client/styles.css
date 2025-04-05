@@ -1,0 +1,64 @@
+/* General body styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+    color: #333;
+  }
+  
+  /* Header styling */
+  h1 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+  }
+  
+  /* Video element styling */
+  #videoFeed {
+    width: 100%;
+    max-width: 600px;
+    border: 2px solid #2c3e50;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Button styling */
+  #recordBtn {
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #2c3e50;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  #recordBtn:hover {
+    background-color: #34495e;
+  }
+  
+  /* Output container styling */
+  #output {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    display: inline-block;
+    text-align: left;
+    max-width: 600px;
+    width: 100%;
+  }
+  
+  /* Paragraph and span styling within output */
+  #output p {
+    margin: 10px 0;
+  }
+  
+  #output span {
+    font-weight: bold;
+  }
+  
