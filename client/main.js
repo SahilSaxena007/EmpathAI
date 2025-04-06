@@ -1,11 +1,24 @@
+// Get UI elements
 const video = document.getElementById("videoFeed");
 const recordBtn = document.getElementById("recordBtn");
+const transcriptTextEl = document.getElementById("transcriptText");
+const emotionLabelEl = document.getElementById("emotionLabel");
+const agentResponseEl = document.getElementById("agentResponse");
 
-let mediaRecorderVideo, mediaRecorderAudio;
-let recordedChunksVideo = [];
-let recordedChunksAudio = [];
 let isRecording = false;
+let recognition; // SpeechRecognition instance
+let socket; // WebSocket connection
+let emotionInterval;
 
+// Load face-api.js models from the CDN
+async function loadFaceModels() {
+  const modelUrl = "https://justadudewhohacks.github.io/face-api.js/models";
+  await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
+  await faceapi.nets.faceExpressionNet.loadFromUri(modelUrl);
+  console.log("Models loaded from CDN");
+}
+
+// Start video stream
 async function startVideo() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -17,94 +30,115 @@ async function startVideo() {
     console.error("Error accessing media devices.", err);
   }
 }
-startVideo();
 
+// Initialize speech recognition (Web Speech API)
+function initSpeechRecognition() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    console.error("Speech recognition not supported in this browser.");
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  recognition.onresult = (event) => {
+    let transcript = "";
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      transcript += event.results[i][0].transcript;
+    }
+    transcriptTextEl.innerText = transcript;
+    // Send transcript update via WebSocket
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "transcript", data: transcript }));
+    }
+  };
+
+  recognition.onerror = (event) => {
+    console.error("Speech recognition error", event.error);
+  };
+}
+
+// Process video frames for emotion detection using face-api.js
+async function processVideoFrames() {
+  if (!video || video.paused || video.ended) return;
+
+  const detections = await faceapi
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    .withFaceExpressions();
+
+  if (detections) {
+    const expressions = detections.expressions;
+    const emotion = Object.keys(expressions).reduce((a, b) =>
+      expressions[a] > expressions[b] ? a : b
+    );
+    emotionLabelEl.innerText = emotion;
+    // Send emotion update via WebSocket
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "emotion", data: emotion }));
+    }
+  }
+}
+
+// Open a WebSocket connection to the backend server
+function openWebSocket() {
+  // Change the URL to your server's address (e.g., ws://localhost:3000)
+  socket = new WebSocket("ws://localhost:3000");
+
+  socket.onopen = () => {
+    console.log("WebSocket connection opened");
+  };
+
+  socket.onmessage = (message) => {
+    const msg = JSON.parse(message.data);
+    if (msg.type === "response") {
+      agentResponseEl.innerText = msg.data;
+      // Use browser TTS to speak the response
+      const utterance = new SpeechSynthesisUtterance(msg.data);
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  socket.onerror = (error) => {
+    console.error("WebSocket error:", error);
+  };
+
+  socket.onclose = () => {
+    console.log("WebSocket connection closed");
+  };
+}
+
+// Start the real-time processing pipeline
+async function startPipeline() {
+  await loadFaceModels();
+  openWebSocket();
+  initSpeechRecognition();
+  recognition.start();
+  // Process video frames every 500ms (adjust as needed)
+  emotionInterval = setInterval(processVideoFrames, 500);
+}
+
+// Stop the pipeline
+function stopPipeline() {
+  if (recognition) recognition.stop();
+  clearInterval(emotionInterval);
+  if (socket) socket.close();
+}
+
+// Attach event listener to record button
 recordBtn.addEventListener("click", () => {
   if (!isRecording) {
-    startRecording();
-    recordBtn.innerText = "Stop Recording";
+    startPipeline();
+    recordBtn.innerText = "Stop Conversation";
     isRecording = true;
   } else {
-    stopRecording();
-    recordBtn.innerText = "Start Recording";
+    stopPipeline();
+    recordBtn.innerText = "Start Conversation";
     isRecording = false;
   }
 });
 
-function startRecording() {
-  const stream = video.srcObject;
-  // Reset recorded chunks
-  recordedChunksVideo = [];
-  recordedChunksAudio = [];
-
-  // Create a MediaRecorder for the entire stream (video + audio)
-  mediaRecorderVideo = new MediaRecorder(stream);
-  mediaRecorderVideo.ondataavailable = (event) => {
-    if (event.data.size > 0) {
-      recordedChunksVideo.push(event.data);
-    }
-  };
-  mediaRecorderVideo.onstop = () => {
-    const videoBlob = new Blob(recordedChunksVideo, { type: "video/webm" });
-    // Name the file with .mp4 extension if desired (for demo purposes)
-    uploadVideo(videoBlob);
-  };
-
-  // Create a separate MediaRecorder for audio only.
-  const audioStream = new MediaStream(stream.getAudioTracks());
-  mediaRecorderAudio = new MediaRecorder(audioStream);
-  mediaRecorderAudio.ondataavailable = (event) => {
-    if (event.data.size > 0) {
-      recordedChunksAudio.push(event.data);
-    }
-  };
-  mediaRecorderAudio.onstop = () => {
-    const audioBlob = new Blob(recordedChunksAudio, { type: "audio/webm" });
-    uploadAudio(audioBlob);
-  };
-
-  // Start both recorders
-  mediaRecorderVideo.start();
-  mediaRecorderAudio.start();
-}
-
-function stopRecording() {
-  if (mediaRecorderVideo && mediaRecorderVideo.state !== "inactive") {
-    mediaRecorderVideo.stop();
-  }
-  if (mediaRecorderAudio && mediaRecorderAudio.state !== "inactive") {
-    mediaRecorderAudio.stop();
-  }
-}
-
-function uploadVideo(blob) {
-  const formData = new FormData();
-  const fileName = `recording_${Date.now()}.mp4`;
-  formData.append("video", blob, fileName);
-
-  fetch("http://localhost:5000/saveVideo", {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("Video file saved:", data);
-    })
-    .catch((error) => console.error("Error uploading video:", error));
-}
-
-function uploadAudio(blob) {
-  const formData = new FormData();
-  const fileName = `recording_audio_${Date.now()}.mp3`;
-  formData.append("audio", blob, fileName);
-
-  fetch("http://localhost:5000/saveAudio", {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("Audio file saved:", data);
-    })
-    .catch((error) => console.error("Error uploading audio:", error));
-}
+// Start video immediately
+startVideo();
