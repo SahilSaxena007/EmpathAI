@@ -51,5 +51,7 @@ full_prompt = messages_to_string(messages)
 response = chat.send_message(
     message=full_prompt)
 
-# Output the AI's empathetic response (accessing the first choice)
-print(response.text)
+# Output the AI's empathetic response
+def get_gemini_response():
+    print(response.text)
+    return response.text
