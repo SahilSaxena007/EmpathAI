@@ -141,9 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     clearInterval(emotionInterval);
     if (chatSocket) chatSocket.close();
     doneBtn.style.display = "none";
-    cancelAnimationFrame(micAnimationId);
-    cancelAnimationFrame(ttsAnimationId);
-    canvasCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
   }
 
   // Function to send final transcript and emotion timeline to the Gemini API via our backend
@@ -188,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Function to call the TTS backend via HTTP and play audio using Neuphonic TTS.
-  // While TTS is playing, switch to circular waveform animation.
+  // During TTS playback, show a circular waveform animation.
   async function speakNeuphonic(text) {
     try {
       const response = await fetch(
@@ -199,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const blob = new Blob([buffer], { type: "audio/wav" });
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
-      // When TTS starts, cancel mic waveform and start circular animation
+      // Switch to TTS mode: cancel mic waveform and start circular animation
       cancelAnimationFrame(micAnimationId);
       animateCircularWaveform();
       await audio.play();

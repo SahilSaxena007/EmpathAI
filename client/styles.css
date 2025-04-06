@@ -1,47 +1,54 @@
-/* Base Styles */
+/* Base Reset */
 * {
   box-sizing: border-box;
-}
-body {
   margin: 0;
+  padding: 0;
+}
+
+/* Body */
+body {
   font-family: 'Roboto', sans-serif;
-  background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+  background: linear-gradient(135deg, #ece9e6, #ffffff);
   color: #333;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Header */
 header {
-  background: #1f3a56;
+  background: linear-gradient(135deg, #283048, #859398);
   padding: 20px;
   text-align: center;
 }
 header h1 {
-  margin: 0;
-  font-size: 2.5rem;
-  color: #fff;
+  font-size: 3rem;
+  color: #f7f7f7;
 }
 
-/* Main Layout */
+/* Main Layout: Two-column design */
 main {
   display: flex;
+  flex: 1;
+  padding: 20px;
+  gap: 20px;
   flex-wrap: wrap;
   justify-content: center;
-  padding: 20px;
 }
 
-/* Left Panel (Video and Controls) */
+/* Left Panel: Video and Controls */
 .left-panel {
   flex: 1 1 300px;
   max-width: 350px;
-  margin: 20px;
-  background: #fff;
+  background: #ffffffcc;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   padding: 20px;
+  text-align: center;
 }
 #videoFeed {
   width: 100%;
-  border: 3px solid #1f3a56;
+  border: 3px solid #283048;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
@@ -53,8 +60,8 @@ main {
 .button-group button {
   padding: 10px 15px;
   font-size: 1rem;
-  background: #1f3a56;
-  color: #fff;
+  background: #283048;
+  color: #f7f7f7;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -64,27 +71,31 @@ main {
   background: #3a5a78;
 }
 
-/* Right Panel (Chatbox) */
+/* Right Panel: Chat Output */
 .right-panel {
   flex: 2 1 300px;
   max-width: 600px;
-  margin: 20px;
-  background: #fff;
+  background: #ffffffcc;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   padding: 20px;
+  overflow-y: auto;
 }
 #output p {
   margin: 15px 0;
   font-size: 1.1rem;
 }
 #output strong {
-  color: #1f3a56;
+  color: #283048;
 }
 
-/* Scrollable Chat History (if needed) */
-#output {
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 10px;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  main {
+    flex-direction: column;
+    align-items: center;
+  }
+  .left-panel, .right-panel {
+    max-width: 90%;
+  }
 }
