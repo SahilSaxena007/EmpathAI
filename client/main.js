@@ -113,13 +113,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const msg = JSON.parse(message.data);
       if (msg.type === "response") {
         appendBubble(msg.data, false);
+        // Use TTS to speak the response
         speakNeuphonic(msg.data).then((audio) => {
           console.log("Playing AI response TTS...");
           audio.addEventListener("ended", () => {
             console.log("AI response playback finished. Ready for next turn.");
-            if (isConversationActive) {
-              doneBtn.style.display = "inline-block";
-            }
           });
         });
       }
@@ -135,6 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
     openWebSocket();
     initSpeechRecognition();
     recognition.start();
+    // Process emotion detection every 500ms
     emotionInterval = setInterval(detectEmotion, 500);
     doneBtn.style.display = "inline-block";
   }
@@ -180,23 +179,14 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("Playing AI response TTS...");
       audio.addEventListener("ended", () => {
         console.log("AI response playback finished. Ready for next turn.");
-        if (isConversationActive) {
-          doneBtn.style.display = "inline-block";
-        }
+        // After AI response, clear transcript and emotion data for the next turn
+        transcriptData = "";
+        emotionTimeline = [];
+        // Restart speech recognition for the next turn
+        initSpeechRecognition();
+        recognition.start();
       });
     });
-  }
-
-  // ---------- End Conversation ----------
-  async function endConversation() {
-    stopPipeline();
-    finalizeUserBubble();
-    transcriptData = "";
-    emotionTimeline = [];
-    appendBubble("Thank you for the conversation.", false);
-    speakNeuphonic("Thank you for the conversation.");
-    isConversationActive = false;
-    recordBtn.innerText = "Start Conversation";
   }
 
   // ---------- TTS Functions ----------
@@ -235,13 +225,16 @@ document.addEventListener("DOMContentLoaded", () => {
       recordBtn.innerText = "Stop Conversation";
       isConversationActive = true;
     } else {
-      endConversation();
+      stopPipeline();
+      recordBtn.innerText = "Start Conversation";
+      isConversationActive = false;
     }
   });
+
   doneBtn.addEventListener("click", () => {
     finishSpeaking();
   });
 
-  // ---------- Initialize Video ----------
+  // Start video on load
   startVideo();
 });
