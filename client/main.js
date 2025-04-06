@@ -84,8 +84,8 @@ async function processVideoFrames() {
 
 // Open a WebSocket connection to the backend server
 function openWebSocket() {
-  // Change the URL to your server's address (e.g., ws://localhost:3000)
-  socket = new WebSocket("ws://localhost:3000");
+  // Updated WebSocket URL to call our Node/Express backend with WebSocket endpoint at /ws on port 3001
+  socket = new WebSocket("ws://localhost:3001/ws");
 
   socket.onopen = () => {
     console.log("WebSocket connection opened");
