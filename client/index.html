@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Mental Health Companion</title>
+    <title>EmpathAI</title>
     <link rel="stylesheet" href="styles.css" />
     <!-- Load face-api.js from CDN -->
     <script
@@ -14,17 +14,30 @@
     <script defer src="main.js"></script>
   </head>
   <body>
-    <h1>AI Mental Health Companion</h1>
-    <!-- Video feed -->
-    <video id="videoFeed" autoplay muted></video>
-    <!-- Control buttons -->
-    <button id="recordBtn">Start Conversation</button>
-    <button id="doneBtn" style="display: none">Done Speaking</button>
-    <!-- Output display -->
-    <div id="output">
-      <p>Transcription: <span id="transcriptText"></span></p>
-      <p>Detected Emotion: <span id="emotionLabel"></span></p>
-      <p>Agent Response: <span id="agentResponse"></span></p>
-    </div>
+    <header>
+      <h1>EmpathAI</h1>
+    </header>
+    <main>
+      <div class="left-panel">
+        <video id="videoFeed" autoplay muted></video>
+        <div class="button-group">
+          <button id="recordBtn">Start Conversation</button>
+          <button id="doneBtn" style="display: none">Done Speaking</button>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div id="output">
+          <p>
+            <strong>Transcription:</strong> <span id="transcriptText"></span>
+          </p>
+          <p>
+            <strong>Detected Emotion:</strong> <span id="emotionLabel"></span>
+          </p>
+          <p>
+            <strong>Agent Response:</strong> <span id="agentResponse"></span>
+          </p>
+        </div>
+      </div>
+    </main>
   </body>
 </html>
