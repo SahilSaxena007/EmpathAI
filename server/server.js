@@ -16,7 +16,7 @@ const server = createServer(app);
 // Set up Neuphonic client for TTS
 const neuphonicClient = createClient({
   apiKey:
-    "96398b6047e226196500d6da74bcb9ffdabf328df8e4ecba8b318336121136c0.f604b39c-63b0-4070-ba80-7f9c56d72f8a",
+    "fadd256a29b94f113a11ac9d637a58906d8d091887b1b5441ac29585443104ef.399259fc-3263-40e8-bcb1-c7e01573fabf",
 });
 
 // Express TTS endpoint
