@@ -3,23 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="styles.css" />
     <title>AI Mental Health Companion</title>
-    <!-- Load face-api.js (using CDN) -->
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Load face-api.js from CDN -->
     <script
       defer
       src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"
     ></script>
+    <!-- Load main.js -->
+    <script defer src="main.js"></script>
   </head>
   <body>
     <h1>AI Mental Health Companion</h1>
+    <!-- Video feed -->
     <video id="videoFeed" autoplay muted></video>
+    <!-- Control buttons -->
     <button id="recordBtn">Start Conversation</button>
+    <button id="doneBtn" style="display: none">Done Speaking</button>
+    <!-- Output display -->
     <div id="output">
       <p>Transcription: <span id="transcriptText"></span></p>
       <p>Detected Emotion: <span id="emotionLabel"></span></p>
       <p>Agent Response: <span id="agentResponse"></span></p>
     </div>
-    <script src="main.js"></script>
   </body>
 </html>

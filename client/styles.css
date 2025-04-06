@@ -24,7 +24,7 @@ h1 {
 }
 
 /* Button styling */
-#recordBtn {
+button {
   margin-top: 15px;
   padding: 10px 20px;
   font-size: 16px;
@@ -36,7 +36,7 @@ h1 {
   transition: background-color 0.3s ease;
 }
 
-#recordBtn:hover {
+button:hover {
   background-color: #34495e;
 }
 

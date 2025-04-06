@@ -3,14 +3,18 @@ import cors from "cors";
 import { createClient, toWav } from "@neuphonic/neuphonic-js";
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
+import { config as dotenvConfig } from "dotenv";
+import { GoogleGenAI } from "@google/genai";
+dotenvConfig();
 
 // Initialize Express app and HTTP server
 const app = express();
 app.use(cors());
+app.use(express.json());
 const server = createServer(app);
 
-// Set up Neuphonic client
-const client = createClient({
+// Set up Neuphonic client for TTS
+const neuphonicClient = createClient({
   apiKey:
     "413c33be2441d1a48bf849e33b491eee24265321d69d3b0ecd7ae8314b7da017.9e93391c-5918-44a4-863e-b62a9da33750",
 });
@@ -19,7 +23,7 @@ const client = createClient({
 app.get("/tts", async (req, res) => {
   try {
     const msg = req.query.msg || "Hello World!";
-    const sse = await client.tts.sse({
+    const sse = await neuphonicClient.tts.sse({
       speed: 1.15,
       lang_code: "en",
       voice_id: "6ffede2d-d96e-4a9b-9d4d-e654b8ef4cf2",
@@ -27,10 +31,34 @@ app.get("/tts", async (req, res) => {
     const result = await sse.send(msg);
     const wav = toWav(result.audio);
     res.setHeader("Content-Type", "audio/wav");
+    res.setHeader("Access-Control-Allow-Origin", "*");
     res.send(wav);
   } catch (error) {
     console.error("TTS Error:", error);
     res.status(500).send("Error processing TTS request");
+  }
+});
+
+// Gemini endpoint – generate an empathetic response using direct HTTP calls
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY || "AIzaSyAE167nmjqDeRaAY_6FQeOy3l8d-rY0f2A";
+app.post("/gemini", async (req, res) => {
+  try {
+    const { transcript, dominant_emotion, emotion_over_time } = req.body;
+    const system_instruction =
+      "You are a compassionate therapist. Read the user's transcript and emotional tone. Understand what they might be going through and respond empathetically. Address the dominant emotion and offer supportive insights.";
+    const user_prompt = `Transcript: ${transcript}\nDominant Emotion: ${dominant_emotion}\n\nHow would you respond?`;
+    const full_prompt = `SYSTEM:\n${system_instruction}\n\nUSER:\n${user_prompt}`;
+
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: full_prompt,
+    });
+    res.json({ response: response.text });
+  } catch (error) {
+    console.error("Gemini Error:", error);
+    res.status(500).send("Error processing Gemini request");
   }
 });
 
@@ -39,12 +67,10 @@ server.listen(3001, () => {
   console.log("Backend running on http://localhost:3001");
 });
 
-// Create and attach WebSocket server to the same HTTP server
+// Create and attach WebSocket server for chat
 const wss = new WebSocketServer({ server, path: "/ws" });
-
 wss.on("connection", (ws) => {
   console.log("WebSocket client connected");
-
   ws.on("message", (message) => {
     try {
       const data = JSON.parse(message);
@@ -57,7 +83,6 @@ wss.on("connection", (ws) => {
       console.error("Error processing WebSocket message:", error);
     }
   });
-
   ws.on("close", () => {
     console.log("WebSocket client disconnected");
   });
