@@ -1,14 +1,17 @@
-/* General body styling */
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
 body {
   margin: 0;
-  font-family: 'Helvetica Neue', sans-serif;
-  background: #f0f8ff;
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
   color: #333;
 }
 
-/* Header styling */
+/* Header */
 header {
-  background: #2c3e50;
+  background: #1f3a56;
   padding: 20px;
   text-align: center;
 }
@@ -18,7 +21,7 @@ header h1 {
   color: #fff;
 }
 
-/* Main container for two-column layout */
+/* Main Layout */
 main {
   display: flex;
   flex-wrap: wrap;
@@ -26,52 +29,62 @@ main {
   padding: 20px;
 }
 
-/* Left panel: video and buttons */
+/* Left Panel (Video and Controls) */
 .left-panel {
   flex: 1 1 300px;
   max-width: 350px;
-  margin: 10px;
-  text-align: center;
+  margin: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
 }
 #videoFeed {
   width: 100%;
-  max-width: 320px;
-  border: 3px solid #2c3e50;
+  border: 3px solid #1f3a56;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 .button-group {
-  margin-top: 15px;
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-around;
 }
 .button-group button {
-  margin: 5px;
-  padding: 10px 20px;
+  padding: 10px 15px;
   font-size: 1rem;
-  background-color: #2c3e50;
+  background: #1f3a56;
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background 0.3s;
 }
 .button-group button:hover {
-  background-color: #34495e;
+  background: #3a5a78;
 }
 
-/* Right panel: chat output */
+/* Right Panel (Chatbox) */
 .right-panel {
   flex: 2 1 300px;
-  max-width: 500px;
-  margin: 10px;
-  padding: 15px;
+  max-width: 600px;
+  margin: 20px;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
 }
 #output p {
   margin: 15px 0;
   font-size: 1.1rem;
 }
 #output strong {
-  color: #2c3e50;
+  color: #1f3a56;
+}
+
+/* Scrollable Chat History (if needed) */
+#output {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
 }

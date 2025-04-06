@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     recognition.onresult = (event) => {
       let interimTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         interimTranscript += event.results[i][0].transcript;
       }
       transcriptTextEl.innerText = interimTranscript;
@@ -141,9 +141,12 @@ document.addEventListener("DOMContentLoaded", () => {
     clearInterval(emotionInterval);
     if (chatSocket) chatSocket.close();
     doneBtn.style.display = "none";
+    cancelAnimationFrame(micAnimationId);
+    cancelAnimationFrame(ttsAnimationId);
+    canvasCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
   }
 
-  // Function to send the final transcript and emotion timeline to the Gemini API via our backend
+  // Function to send final transcript and emotion timeline to the Gemini API via our backend
   async function sendGeminiRequest(data) {
     try {
       const response = await fetch("http://localhost:3001/gemini", {
@@ -184,7 +187,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Function to call the TTS backend via HTTP and play audio using Neuphonic TTS
+  // Function to call the TTS backend via HTTP and play audio using Neuphonic TTS.
+  // While TTS is playing, switch to circular waveform animation.
   async function speakNeuphonic(text) {
     try {
       const response = await fetch(
@@ -195,7 +199,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const blob = new Blob([buffer], { type: "audio/wav" });
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
+      // When TTS starts, cancel mic waveform and start circular animation
+      cancelAnimationFrame(micAnimationId);
+      animateCircularWaveform();
       await audio.play();
+      audio.addEventListener("ended", () => {
+        cancelAnimationFrame(ttsAnimationId);
+        canvasCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+      });
       return audio;
     } catch (error) {
       console.error("Error in TTS:", error);
@@ -203,16 +214,75 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Circular waveform animation for TTS (repeating constant animation)
+  function animateCircularWaveform() {
+    canvasCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+    const centerX = waveformCanvas.width / 2;
+    const centerY = waveformCanvas.height / 2;
+    const radius = Math.min(centerX, centerY) * 0.5;
+    canvasCtx.beginPath();
+    canvasCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    canvasCtx.strokeStyle = "#ff3399";
+    canvasCtx.lineWidth = 5;
+    canvasCtx.stroke();
+    ttsAnimationId = requestAnimationFrame(animateCircularWaveform);
+  }
+
+  // Attach mic waveform to visualize user's speech
+  async function setupMicAnalyser() {
+    const stream = video.srcObject;
+    if (!stream) return;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    micSource = audioCtx.createMediaStreamSource(stream);
+    micAnalyser = audioCtx.createAnalyser();
+    micAnalyser.fftSize = 2048;
+    micSource.connect(micAnalyser);
+    animateMicWaveform();
+  }
+
+  function animateMicWaveform() {
+    const bufferLength = micAnalyser.fftSize;
+    const dataArray = new Uint8Array(bufferLength);
+    micAnalyser.getByteTimeDomainData(dataArray);
+
+    canvasCtx.fillStyle = "#222";
+    canvasCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = "#00ff00";
+    canvasCtx.beginPath();
+
+    const sliceWidth = waveformCanvas.width / bufferLength;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+      const v = dataArray[i] / 128.0;
+      const y = (v * waveformCanvas.height) / 2;
+      if (i === 0) {
+        canvasCtx.moveTo(x, y);
+      } else {
+        canvasCtx.lineTo(x, y);
+      }
+      x += sliceWidth;
+    }
+    canvasCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+    canvasCtx.stroke();
+    micAnimationId = requestAnimationFrame(animateMicWaveform);
+  }
+
   // Greet user with TTS, then start conversation pipeline after greeting finishes
   async function greetUser() {
     const audio = await speakNeuphonic("Hello! How can I help you today?");
     audio.addEventListener("ended", () => {
       console.log("Greeting finished. Now listening...");
+      // Start mic waveform after greeting
+      setupMicAnalyser();
       startPipeline();
     });
   }
 
-  // Attach event listener to record button (manual fallback control)
   recordBtn.addEventListener("click", async () => {
     if (!isConversationActive) {
       await greetUser();
@@ -225,11 +295,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Attach event listener to done button to signal end of user's turn
   doneBtn.addEventListener("click", () => {
     finishSpeaking();
   });
 
-  // Start video immediately so the user sees their feed
   startVideo();
 });
