@@ -31,6 +31,23 @@ async function startVideo() {
   }
 }
 
+// Call the TTS API for the initial greeting and play the resulting audio
+async function playInitialGreeting() {
+  try {
+    const response = await fetch(
+      "http://localhost:3001/tts?msg=" +
+        encodeURIComponent("Hello! How can I help you today?")
+    );
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBlob = new Blob([arrayBuffer], { type: "audio/wav" });
+    const url = URL.createObjectURL(audioBlob);
+    const audio = new Audio(url);
+    audio.play();
+  } catch (error) {
+    console.error("Error playing initial greeting:", error);
+  }
+}
+
 // Initialize speech recognition (Web Speech API)
 function initSpeechRecognition() {
   const SpeechRecognition =
@@ -84,7 +101,7 @@ async function processVideoFrames() {
 
 // Open a WebSocket connection to the backend server
 function openWebSocket() {
-  // Updated WebSocket URL to call our Node/Express backend with WebSocket endpoint at /ws on port 3001
+  // Connect to our Node/Express backend with WebSocket endpoint at /ws on port 3001
   socket = new WebSocket("ws://localhost:3001/ws");
 
   socket.onopen = () => {
@@ -128,8 +145,11 @@ function stopPipeline() {
 }
 
 // Attach event listener to record button
-recordBtn.addEventListener("click", () => {
+recordBtn.addEventListener("click", async () => {
   if (!isRecording) {
+    // Call TTS API for the initial greeting and play it
+    await playInitialGreeting();
+    // Start the conversation pipeline
     startPipeline();
     recordBtn.innerText = "Stop Conversation";
     isRecording = true;
