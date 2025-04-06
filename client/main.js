@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Get UI elements
+  // UI Elements
   const video = document.getElementById("videoFeed");
   const recordBtn = document.getElementById("recordBtn");
   const doneBtn = document.getElementById("doneBtn");
@@ -7,13 +7,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let isConversationActive = false;
   let recognition; // SpeechRecognition instance
-  let chatSocket; // WebSocket connection
+  let chatSocket; // WebSocket connection for chat
   let emotionInterval;
   let transcriptData = "";
   let emotionTimeline = [];
   let lastEmotion = "neutral";
+  let currentUserBubble = null;
 
-  // ---------- Utility: Append a chat bubble ----------
+  // ---------- Chat Bubble Functions ----------
   function appendBubble(content, isUser = true) {
     const bubble = document.createElement("div");
     bubble.classList.add("message-bubble");
@@ -23,22 +24,35 @@ document.addEventListener("DOMContentLoaded", () => {
     chatContainer.scrollTop = chatContainer.scrollHeight;
   }
 
-  // ---------- Utility: Append emotion note ----------
-  function appendEmotionNote(emotion) {
-    const note = document.createElement("div");
-    note.classList.add("emotion-note");
-    note.innerText = `Detected Emotion: ${emotion}`;
-    chatContainer.appendChild(note);
+  function updateUserBubble(text) {
+    if (!currentUserBubble) {
+      currentUserBubble = document.createElement("div");
+      currentUserBubble.classList.add("message-bubble", "user-bubble");
+      chatContainer.appendChild(currentUserBubble);
+    }
+    currentUserBubble.innerText = text;
     chatContainer.scrollTop = chatContainer.scrollHeight;
+    transcriptData = text;
   }
 
-  // ---------- Face-API / Video Setup ----------
+  function finalizeUserBubble() {
+    if (currentUserBubble) {
+      const note = document.createElement("div");
+      note.classList.add("emotion-note");
+      note.innerText = `Detected Emotion: ${lastEmotion}`;
+      currentUserBubble.appendChild(note);
+      currentUserBubble = null;
+    }
+  }
+
+  // ---------- Face-API Setup ----------
   async function loadFaceModels() {
     const modelUrl = "https://justadudewhohacks.github.io/face-api.js/models";
     await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
     await faceapi.nets.faceExpressionNet.loadFromUri(modelUrl);
     console.log("Models loaded from CDN");
   }
+
   async function startVideo() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -50,6 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error accessing media devices:", err);
     }
   }
+
   async function detectEmotion() {
     if (!video || video.paused || video.ended) return;
     const detection = await faceapi
@@ -77,54 +92,41 @@ document.addEventListener("DOMContentLoaded", () => {
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    recognition.onresult = (e) => {
-      let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        interim += e.results[i][0].transcript;
+    recognition.onresult = (event) => {
+      let interimTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        interimTranscript += event.results[i][0].transcript;
       }
-      transcriptData = interim;
+      updateUserBubble(interimTranscript);
     };
-    recognition.onerror = (err) => {
-      console.error("Speech recognition error:", err);
-    };
-  }
 
-  // ---------- TTS Playback ----------
-  async function speakNeuphonic(text) {
-    try {
-      const resp = await fetch(
-        `http://localhost:3001/tts?msg=${encodeURIComponent(text)}`
-      );
-      if (!resp.ok) throw new Error("TTS request failed");
-      const buffer = await resp.arrayBuffer();
-      const blob = new Blob([buffer], { type: "audio/wav" });
-      const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio(audioUrl);
-      await audio.play();
-      return audio;
-    } catch (error) {
-      console.error("Error in TTS:", error);
-      return { addEventListener: () => {} };
-    }
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+    };
   }
 
   // ---------- WebSocket Setup ----------
   function openWebSocket() {
     chatSocket = new WebSocket("ws://localhost:3001/ws");
-    chatSocket.onopen = () => console.log("WebSocket open");
+    chatSocket.onopen = () => console.log("Chat WebSocket connection opened");
     chatSocket.onmessage = (message) => {
       const msg = JSON.parse(message.data);
       if (msg.type === "response") {
-        // AI Response bubble
         appendBubble(msg.data, false);
-        // TTS speak the AI response
         speakNeuphonic(msg.data).then((audio) => {
           console.log("Playing AI response TTS...");
+          audio.addEventListener("ended", () => {
+            console.log("AI response playback finished. Ready for next turn.");
+            if (isConversationActive) {
+              doneBtn.style.display = "inline-block";
+            }
+          });
         });
       }
     };
-    chatSocket.onerror = (err) => console.error("WebSocket error:", err);
-    chatSocket.onclose = () => console.log("WebSocket closed");
+    chatSocket.onerror = (error) =>
+      console.error("Chat WebSocket error:", error);
+    chatSocket.onclose = () => console.log("Chat WebSocket connection closed");
   }
 
   // ---------- Conversation Pipeline ----------
@@ -136,6 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
     emotionInterval = setInterval(detectEmotion, 500);
     doneBtn.style.display = "inline-block";
   }
+
   function stopPipeline() {
     if (recognition) recognition.stop();
     clearInterval(emotionInterval);
@@ -146,28 +149,25 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- Gemini Request ----------
   async function sendGeminiRequest(data) {
     try {
-      const resp = await fetch("http://localhost:3001/gemini", {
+      const response = await fetch("http://localhost:3001/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!resp.ok) throw new Error("Gemini request failed");
-      const result = await resp.json();
+      if (!response.ok) throw new Error("Gemini API request failed");
+      const result = await response.json();
       return result.response;
     } catch (error) {
       console.error("Error in Gemini request:", error);
-      return "Sorry, I couldn't process that.";
+      return "I'm sorry, I couldn't process that. Could you please repeat?";
     }
   }
 
   async function finishSpeaking() {
     stopPipeline();
-    // Show the user's final transcript as a user bubble
-    appendBubble(transcriptData, true);
-    // Show the detected emotion as a note (optional)
-    appendEmotionNote(lastEmotion);
-
-    // Build data for Gemini
+    finalizeUserBubble();
+    console.log("Final transcript:", transcriptData);
+    console.log("Emotion timeline:", emotionTimeline);
     const finalData = {
       timestamp: new Date().toISOString(),
       transcript: transcriptData,
@@ -175,14 +175,52 @@ document.addEventListener("DOMContentLoaded", () => {
       emotion_over_time: emotionTimeline,
     };
     const geminiResponse = await sendGeminiRequest(finalData);
-    // AI response bubble
     appendBubble(geminiResponse, false);
-    // TTS speak the Gemini response
-    speakNeuphonic(geminiResponse);
+    speakNeuphonic(geminiResponse).then((audio) => {
+      console.log("Playing AI response TTS...");
+      audio.addEventListener("ended", () => {
+        console.log("AI response playback finished. Ready for next turn.");
+        if (isConversationActive) {
+          doneBtn.style.display = "inline-block";
+        }
+      });
+    });
   }
 
-  // ---------- Start Greeting ----------
+  // ---------- End Conversation ----------
+  async function endConversation() {
+    stopPipeline();
+    finalizeUserBubble();
+    transcriptData = "";
+    emotionTimeline = [];
+    appendBubble("Thank you for the conversation.", false);
+    speakNeuphonic("Thank you for the conversation.");
+    isConversationActive = false;
+    recordBtn.innerText = "Start Conversation";
+  }
+
+  // ---------- TTS Functions ----------
+  async function speakNeuphonic(text) {
+    try {
+      const response = await fetch(
+        `http://localhost:3001/tts?msg=${encodeURIComponent(text)}`
+      );
+      if (!response.ok) throw new Error("TTS request failed");
+      const buffer = await response.arrayBuffer();
+      const blob = new Blob([buffer], { type: "audio/wav" });
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      await audio.play();
+      return audio;
+    } catch (error) {
+      console.error("Error in TTS:", error);
+      return { addEventListener: () => {} };
+    }
+  }
+
+  // ---------- Greeting ----------
   async function greetUser() {
+    appendBubble("Hello! How can I help you today?", false);
     const audio = await speakNeuphonic("Hello! How can I help you today?");
     audio.addEventListener("ended", () => {
       console.log("Greeting finished. Now listening...");
@@ -197,15 +235,13 @@ document.addEventListener("DOMContentLoaded", () => {
       recordBtn.innerText = "Stop Conversation";
       isConversationActive = true;
     } else {
-      stopPipeline();
-      recordBtn.innerText = "Start Conversation";
-      isConversationActive = false;
+      endConversation();
     }
   });
   doneBtn.addEventListener("click", () => {
     finishSpeaking();
   });
 
-  // ---------- Initialize ----------
+  // ---------- Initialize Video ----------
   startVideo();
 });

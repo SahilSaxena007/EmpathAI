@@ -16,7 +16,7 @@ const server = createServer(app);
 // Set up Neuphonic client for TTS
 const neuphonicClient = createClient({
   apiKey:
-    "413c33be2441d1a48bf849e33b491eee24265321d69d3b0ecd7ae8314b7da017.9e93391c-5918-44a4-863e-b62a9da33750",
+    "96398b6047e226196500d6da74bcb9ffdabf328df8e4ecba8b318336121136c0.f604b39c-63b0-4070-ba80-7f9c56d72f8a",
 });
 
 // Express TTS endpoint
@@ -39,14 +39,15 @@ app.get("/tts", async (req, res) => {
   }
 });
 
-// Gemini endpoint – generate an empathetic response using direct HTTP calls
+// Gemini endpoint – generate an empathetic response with a 120-word limit
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || "AIzaSyAE167nmjqDeRaAY_6FQeOy3l8d-rY0f2A";
 app.post("/gemini", async (req, res) => {
   try {
     const { transcript, dominant_emotion, emotion_over_time } = req.body;
+    // Build the prompt with a 120-word limit instruction.
     const system_instruction =
-      "You are a compassionate therapist. Read the user's transcript and emotional tone. Understand what they might be going through and respond empathetically. Address the dominant emotion and offer supportive insights.";
+      "You are a compassionate therapist. Read the user's transcript and emotional tone. Understand what they might be going through and respond empathetically. Address the dominant emotion and offer supportive insights. Your response should be within 120 words.";
     const user_prompt = `Transcript: ${transcript}\nDominant Emotion: ${dominant_emotion}\n\nHow would you respond?`;
     const full_prompt = `SYSTEM:\n${system_instruction}\n\nUSER:\n${user_prompt}`;
 
@@ -71,6 +72,7 @@ server.listen(3001, () => {
 const wss = new WebSocketServer({ server, path: "/ws" });
 wss.on("connection", (ws) => {
   console.log("WebSocket client connected");
+
   ws.on("message", (message) => {
     try {
       const data = JSON.parse(message);
@@ -83,6 +85,7 @@ wss.on("connection", (ws) => {
       console.error("Error processing WebSocket message:", error);
     }
   });
+
   ws.on("close", () => {
     console.log("WebSocket client disconnected");
   });

@@ -26,7 +26,7 @@ header h1 {
   color: #f7f7f7;
 }
 
-/* Main Layout */
+/* Main Layout: Two-column design */
 main {
   display: flex;
   flex: 1;
@@ -90,6 +90,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 500px;
 }
 
 /* Chat Bubbles */
@@ -99,7 +100,7 @@ main {
   border-radius: 16px;
   line-height: 1.4;
   font-size: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 .user-bubble {
   align-self: flex-end;
@@ -114,20 +115,11 @@ main {
   border-bottom-left-radius: 0;
 }
 
-/* Small note for emotion display */
+/* Emotion Note */
 .emotion-note {
-  margin-top: 4px;
   font-size: 0.85rem;
-  color: #777;
-}
-
-/* Scrollbar style (optional) */
-.chat-container::-webkit-scrollbar {
-  width: 8px;
-}
-.chat-container::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
+  color: #ff7043;
+  margin-top: 4px;
 }
 
 /* Responsive adjustments */
